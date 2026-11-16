@@ -213,6 +213,217 @@ export function createSkinBumpTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+export function createTattooTexture(style: string): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.clearRect(0, 0, size, size);
+
+  if (style === 'none') {
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  // Ink color: dark vintage deep blue-black tattoo ink
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (style === 'chest_eagle' || style === 'full_inked') {
+    // Majestic spread eagle emblem on chest
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    // Head / Beak
+    ctx.arc(size / 2, 140, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(size / 2 - 6, 142);
+    ctx.lineTo(size / 2 - 28, 148);
+    ctx.lineTo(size / 2 - 4, 156);
+    ctx.fill();
+
+    // Wings spread
+    for (let w = 0; w < 5; w++) {
+      ctx.beginPath();
+      // Left Wing
+      ctx.moveTo(size / 2 - 20, 160 + w * 12);
+      ctx.quadraticCurveTo(size / 2 - 120, 90 + w * 15, 60 + w * 25, 110 + w * 32);
+      ctx.quadraticCurveTo(size / 2 - 90, 190 + w * 12, size / 2 - 15, 180 + w * 14);
+      ctx.stroke();
+      ctx.fill();
+
+      // Right Wing
+      ctx.beginPath();
+      ctx.moveTo(size / 2 + 20, 160 + w * 12);
+      ctx.quadraticCurveTo(size / 2 + 120, 90 + w * 15, size - (60 + w * 25), 110 + w * 32);
+      ctx.quadraticCurveTo(size / 2 + 90, 190 + w * 12, size / 2 + 15, 180 + w * 14);
+      ctx.stroke();
+      ctx.fill();
+    }
+    // Banner / stars
+    ctx.lineWidth = 4;
+    ctx.strokeRect(size / 2 - 100, 270, 200, 36);
+  }
+
+  if (style === 'sleeve_tribal_left' || style === 'full_inked') {
+    // Polynesian / Maori dense sharp geometries
+    ctx.lineWidth = 5;
+    for (let y = 40; y < 480; y += 45) {
+      ctx.beginPath();
+      ctx.moveTo(40, y);
+      ctx.lineTo(140, y + 25);
+      ctx.lineTo(90, y + 50);
+      ctx.lineTo(40, y + 25);
+      ctx.closePath();
+      ctx.fill();
+      // Repeating spearheads
+      ctx.beginPath();
+      ctx.arc(160, y + 25, 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  if (style === 'sleeve_dragon_right' || style === 'full_inked') {
+    // Oriental coiled dragon & waves
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(size - 60, 60);
+    ctx.bezierCurveTo(size - 180, 140, size - 40, 260, size - 160, 340);
+    ctx.bezierCurveTo(size - 220, 390, size - 80, 440, size - 120, 490);
+    ctx.stroke();
+
+    // Scales & claws
+    for (let s = 100; s < 450; s += 35) {
+      ctx.beginPath();
+      ctx.arc(size - 110, s, 16, 0, Math.PI);
+      ctx.stroke();
+    }
+  }
+
+  if (style === 'back_wings' || style === 'full_inked') {
+    // Massive angel / demon wings covering shoulder blades
+    ctx.lineWidth = 6;
+    for (let f = 0; f < 7; f++) {
+      ctx.beginPath();
+      ctx.moveTo(size / 2 - 30, 220 + f * 25);
+      ctx.bezierCurveTo(size / 2 - 190, 260 + f * 10, 40, 340 + f * 20, 25, 460);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(size / 2 + 30, 220 + f * 25);
+      ctx.bezierCurveTo(size / 2 + 190, 260 + f * 10, size - 40, 340 + f * 20, size - 25, 460);
+      ctx.stroke();
+    }
+  }
+
+  if (style === 'neck_crown') {
+    // Imperial Crown & Gothic script on throat/neck
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(size / 2 - 45, 120);
+    ctx.lineTo(size / 2 - 35, 75);
+    ctx.lineTo(size / 2 - 15, 100);
+    ctx.lineTo(size / 2, 60);
+    ctx.lineTo(size / 2 + 15, 100);
+    ctx.lineTo(size / 2 + 35, 75);
+    ctx.lineTo(size / 2 + 45, 120);
+    ctx.closePath();
+    ctx.fill();
+
+    // Laurel branch
+    ctx.beginPath();
+    ctx.arc(size / 2, 135, 55, 0.2 * Math.PI, 0.8 * Math.PI);
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+export function createTrunksPatternTexture(
+  pattern: string,
+  baseColor: string,
+  accentColor: string
+): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, size, size);
+
+  if (pattern === 'stripe') {
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(0, 0, 48, size);
+    ctx.fillRect(size - 48, 0, 48, size);
+    ctx.fillRect(size / 2 - 24, 0, 48, size);
+  } else if (pattern === 'championship') {
+    ctx.fillStyle = accentColor;
+    // Top border waistband
+    ctx.fillRect(0, 0, size, 64);
+    ctx.fillRect(0, size - 48, size, 48);
+    // Gold stars
+    ctx.fillStyle = '#FFF';
+    for (let i = 60; i < size; i += 90) {
+      ctx.beginPath();
+      ctx.arc(i, 32, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (pattern === 'camo') {
+    // Tactical military camouflage patches
+    const patches = [
+      { x: 80, y: 100, r: 60, col: accentColor },
+      { x: 280, y: 160, r: 85, col: '#1E293B' },
+      { x: 180, y: 340, r: 90, col: accentColor },
+      { x: 400, y: 280, r: 70, col: '#0F172A' },
+      { x: 340, y: 440, r: 80, col: accentColor },
+      { x: 90, y: 460, r: 65, col: '#1E293B' },
+    ];
+    patches.forEach((p) => {
+      ctx.fillStyle = p.col;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.65, Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (pattern === 'gladiator') {
+    // Roman/spartan vertical leather pteryges flaps with gold studs
+    ctx.fillStyle = accentColor;
+    for (let x = 32; x < size; x += 64) {
+      ctx.fillRect(x, 120, 40, size - 150);
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.arc(x + 20, size - 60, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accentColor;
+    }
+  } else if (pattern === 'flames') {
+    // Dynamic hot rod flames rising from bottom
+    ctx.fillStyle = accentColor;
+    for (let x = 0; x < size; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, size);
+      ctx.quadraticCurveTo(x + 16, size - 140, x + 32, size - 220);
+      ctx.quadraticCurveTo(x + 48, size - 140, x + 64, size);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export function createApronBannerTexture(
   maxAnisotropy: number,
   tier: 'local' | 'national' | 'world'

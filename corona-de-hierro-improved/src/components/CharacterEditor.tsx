@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Check, ArrowLeft, User, Sliders, Shield, Sparkles } from 'lucide-react';
+import { Check, ArrowLeft, User, Sliders, Shield, Sparkles, Footprints, Flame } from 'lucide-react';
 import {
   BOXER_TRAITS,
   COUNTRIES,
@@ -12,12 +12,15 @@ import {
   WEIGHT_CLASSES,
 } from '../data/careerData';
 import {
+  BootsStyleId,
   BoxerAppearance,
   BoxerStats,
   FacialHairId,
+  FightStyleTechnique,
   GloveFinishId,
   HairStyleId,
   PunchType,
+  TattooStyleId,
   TraitId,
   TrunksPatternId,
 } from '../types/game';
@@ -38,7 +41,7 @@ interface CharacterEditorProps {
   onCancel: () => void;
 }
 
-type EditorTab = 'identity' | 'body' | 'gear' | 'traits';
+type EditorTab = 'identity' | 'body' | 'tattoos' | 'gear' | 'boots' | 'traits';
 
 export const CharacterEditor: React.FC<CharacterEditorProps> = ({
   initialAppearance,
@@ -177,6 +180,7 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
         poseBoxer(rigRef.current, {
           dt,
           stance: appearanceRef.current.stance,
+          fightTechnique: appearanceRef.current.fightTechnique,
           elapsed: t,
           guardHigh: 0.32,
           guardLow: 0,
@@ -276,9 +280,11 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
   };
 
   const tabs: { id: EditorTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'identity', label: 'Identidad', icon: <User className="w-4 h-4" /> },
-    { id: 'body', label: 'Físico y Rostro', icon: <Sliders className="w-4 h-4" /> },
-    { id: 'gear', label: 'Equipamiento', icon: <Shield className="w-4 h-4" /> },
+    { id: 'identity', label: 'Identidad y Técnica', icon: <User className="w-4 h-4" /> },
+    { id: 'body', label: 'Cuerpo y Pelo', icon: <Sliders className="w-4 h-4" /> },
+    { id: 'tattoos', label: 'Tatuajes Realistas', icon: <Flame className="w-4 h-4" /> },
+    { id: 'gear', label: 'Short y Guantes', icon: <Shield className="w-4 h-4" /> },
+    { id: 'boots', label: 'Botas de Boxeo', icon: <Footprints className="w-4 h-4" /> },
     { id: 'traits', label: 'Rasgos Únicos', icon: <Sparkles className="w-4 h-4" /> },
   ];
 
@@ -487,6 +493,55 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Fighting Style / Technique */}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-2">
+                  Estilo de Lucha · Técnica de Guardia
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(
+                    [
+                      {
+                        id: 'orthodox_classic',
+                        label: 'Clásico Erguido',
+                        desc: 'Guardia estándar de pie. Jab seco, recto largo y ganchos bien plantados. Versátil y sólido.',
+                      },
+                      {
+                        id: 'philly_shell',
+                        label: 'Philly Shell (Hombro Rodante)',
+                        desc: 'Brazo de guardia cruzado bajo, hombro líder elevado como escudo. Desviar y golpear en la misma acción.',
+                      },
+                      {
+                        id: 'peek_a_boo',
+                        label: 'Peek-a-Boo (Senos cubiertas)',
+                        desc: 'Puños pegados a la cara en cuclillas, guardia altísima. Movimiento explosivo a corta distancia.',
+                      },
+                      {
+                        id: 'slugger_heavy',
+                        label: 'Pegador Pesado',
+                        desc: 'Guardia abierta cargada de poder. Lento pero con capacidad de noquear con un solo golpe.',
+                      },
+                    ] as { id: FightStyleTechnique; label: string; desc: string }[]
+                  ).map((ft) => (
+                    <button
+                      key={ft.id}
+                      onClick={() => {
+                        soundEngine.playClick();
+                        updateField('fightTechnique', ft.id);
+                      }}
+                      className={`p-3.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                        appearance.fightTechnique === ft.id
+                          ? 'bg-amber-500/15 border-amber-500'
+                          : 'bg-[#161B26] border-white/10 hover:border-white/25'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm text-white">{ft.label}</div>
+                      <div className="text-xs text-slate-400 mt-1">{ft.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -544,24 +599,31 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
 
               {/* Hair Style & Color */}
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-2">Estilo de Cabello</label>
+                <label className="block text-xs font-medium text-slate-400 mb-2">Corte de Pelo Realista</label>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ['buzz', 'Rapado'],
-                      ['fade', 'Degradado'],
-                      ['mohawk', 'Cresta'],
-                      ['braids', 'Trenzas'],
-                      ['long', 'Melena'],
+                      ['bald', '🪮 Rapado Total'],
+                      ['buzz', '✂️ Buzz Cut'],
+                      ['fade', '💈 Fade Degradado'],
+                      ['textured_crop', '🎯 Textured Crop'],
+                      ['slick_back', '💎 Peinado Atrás'],
+                      ['dreadlocks', '🌿 Rastas Atadas'],
+                      ['cornrows', '⚡ Trenzas Cornrow'],
+                      ['curly_afro', '☁️ Afro Rizado'],
+                      ['topknot', '🎋 Moño Guerrero'],
+                      ['mohawk', '🔥 Mohawk'],
+                      ['braids', '〰️ Trenzas'],
+                      ['long', '🌊 Melena Larga'],
                     ] as [HairStyleId, string][]
                   ).map(([id, label]) => (
                     <button
                       key={id}
                       onClick={() => updateField('hairStyle', id)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-medium border cursor-pointer ${
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border cursor-pointer transition-colors ${
                         appearance.hairStyle === id
                           ? 'bg-amber-500/15 border-amber-500 text-amber-300'
-                          : 'bg-[#161B26] border-white/10 text-slate-300'
+                          : 'bg-[#161B26] border-white/10 text-slate-300 hover:border-white/25'
                       }`}
                     >
                       {label}
@@ -575,19 +637,22 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ['clean', 'Afeitado'],
-                      ['stubble', 'Sombra'],
-                      ['goatee', 'Candado'],
-                      ['full_beard', 'Barba Completa'],
+                      ['clean', '🪒 Afeitado'],
+                      ['stubble', '🌑 Sombra Ligera'],
+                      ['heavy_stubble', '🌒 Barba Corta Densa'],
+                      ['mustache_vintage', '🥸 Bigote Clásico'],
+                      ['goatee', '🎭 Candado / Chiva'],
+                      ['full_beard', '🧔 Barba Completa'],
+                      ['viking_beard', '⚔️ Barba Vikinga'],
                     ] as [FacialHairId, string][]
                   ).map(([id, label]) => (
                     <button
                       key={id}
                       onClick={() => updateField('facialHair', id)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-medium border cursor-pointer ${
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border cursor-pointer transition-colors ${
                         appearance.facialHair === id
                           ? 'bg-amber-500/15 border-amber-500 text-amber-300'
-                          : 'bg-[#161B26] border-white/10 text-slate-300'
+                          : 'bg-[#161B26] border-white/10 text-slate-300 hover:border-white/25'
                       }`}
                     >
                       {label}
@@ -627,11 +692,89 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
             </div>
           )}
 
+          {activeTab === 'tattoos' && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <label className="block text-xs font-medium text-amber-400 mb-1">Tatuajes Realistas</label>
+                <p className="text-xs text-slate-400 mb-4">
+                  Los tatuajes se proyectan sobre la piel del personaje con tinta realista visible en el 3D.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(
+                    [
+                      {
+                        id: 'none',
+                        label: '— Sin Tatuajes',
+                        desc: 'Piel limpia sin tinta.',
+                        emoji: '🫧',
+                      },
+                      {
+                        id: 'chest_eagle',
+                        label: 'Águila en el Pecho',
+                        desc: 'Gran águila imperial extendida cubriendo el torso. Estilo americana clásica.',
+                        emoji: '🦅',
+                      },
+                      {
+                        id: 'sleeve_tribal_left',
+                        label: 'Manga Tribal Izquierda',
+                        desc: 'Geométricas polinesias densas desde el hombro hasta la muñeca. Izquierdo.',
+                        emoji: '🌀',
+                      },
+                      {
+                        id: 'sleeve_dragon_right',
+                        label: 'Manga Dragón Derecha',
+                        desc: 'Dragón oriental enroscado con escamas y olas. Brazo derecho completo.',
+                        emoji: '🐉',
+                      },
+                      {
+                        id: 'back_wings',
+                        label: 'Alas de Ángel / Demonio',
+                        desc: 'Alas masivas que cubren toda la espalda hasta los omóplatos.',
+                        emoji: '👼',
+                      },
+                      {
+                        id: 'neck_crown',
+                        label: 'Corona en el Cuello',
+                        desc: 'Corona imperial y escritura gótica en la garganta. Presencia intimidante.',
+                        emoji: '👑',
+                      },
+                      {
+                        id: 'full_inked',
+                        label: 'Lleno de Tinta (Completo)',
+                        desc: 'Pecho, ambas mangas y espalda completamente tatuados. El más agresivo.',
+                        emoji: '🖤',
+                      },
+                    ] as { id: TattooStyleId; label: string; desc: string; emoji: string }[]
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        soundEngine.playClick();
+                        updateField('tattooStyle', t.id);
+                      }}
+                      className={`p-3.5 rounded-lg border text-left cursor-pointer transition-colors ${
+                        appearance.tattooStyle === t.id
+                          ? 'bg-amber-500/15 border-amber-500'
+                          : 'bg-[#161B26] border-white/10 hover:border-white/25'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{t.emoji}</span>
+                        <span className="font-semibold text-sm text-white">{t.label}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">{t.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'gear' && (
             <div className="space-y-6 max-w-2xl">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-2">
-                  Conjunto de Pantalón de Combate
+                  Paleta de Colores — Short de Combate
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {GEAR_PALETTES.map((gp) => (
@@ -665,15 +808,18 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-2">
-                  Corte y Diseño del Pantalón
+                  Diseño del Short
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ['classic', 'Clásico'],
-                      ['stripe', 'Franja Lateral'],
-                      ['championship', 'Cinturón Campeón'],
-                      ['metallic', 'Satén Metálico'],
+                      ['classic', '🥊 Clásico Liso'],
+                      ['stripe', '📏 Franja Lateral'],
+                      ['championship', '🏆 Cinturón Campeón'],
+                      ['metallic', '✨ Satén Metálico'],
+                      ['camo', '🎯 Camuflaje Táctico'],
+                      ['gladiator', '⚔️ Gladiador Romano'],
+                      ['flames', '🔥 Llamas'],
                     ] as [TrunksPatternId, string][]
                   ).map(([id, label]) => (
                     <button
@@ -693,7 +839,7 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-2">
-                  Guantes Profesionales
+                  Paleta de Guantes
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {GEAR_PALETTES.map((gp) => (
@@ -730,9 +876,10 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ['matte', 'Cuero Mate'],
-                      ['glossy', 'Barniz Brillante'],
-                      ['metallic', 'Acabado Metálico'],
+                      ['matte', '🎿 Cuero Mate'],
+                      ['glossy', '💧 Barniz Brillante'],
+                      ['metallic', '🥈 Metálico'],
+                      ['vintage_leather', '🤎 Cuero Vintage Desgastado'],
                     ] as [GloveFinishId, string][]
                   ).map(([id, label]) => (
                     <button
@@ -747,6 +894,144 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({
                       {label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Tape Color */}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-2">Color del Vendaje / Tape</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { name: 'Blanco Clásico', hex: '#F8FAFC' },
+                    { name: 'Negro', hex: '#0F172A' },
+                    { name: 'Rojo', hex: '#DC2626' },
+                    { name: 'Azul', hex: '#1D4ED8' },
+                    { name: 'Oro', hex: '#F59E0B' },
+                  ].map((tc) => (
+                    <button
+                      key={tc.hex}
+                      onClick={() => updateField('gloveTapeColor', tc.hex)}
+                      title={tc.name}
+                      className={`w-9 h-9 rounded-lg border-2 cursor-pointer ${
+                        appearance.gloveTapeColor === tc.hex ? 'border-amber-400 scale-110' : 'border-white/15'
+                      }`}
+                      style={{ backgroundColor: tc.hex }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'boots' && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <label className="block text-xs font-medium text-amber-400 mb-1">Botas de Boxeo</label>
+                <p className="text-xs text-slate-400 mb-4">
+                  Elige el modelo, color y accesorios de tus botas de combate.
+                </p>
+
+                {/* Boot Style */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                  {(
+                    [
+                      {
+                        id: 'classic_high',
+                        label: '🥾 Bota Alta Clásica',
+                        desc: 'Caña alta tradicional. Soporte máximo en tobillo. Estilo golden era.',
+                      },
+                      {
+                        id: 'speed_low',
+                        label: '👟 Zapatilla Speed Baja',
+                        desc: 'Corte bajo, ultra-ligera. Máxima velocidad de pies. Favorita de velocistas.',
+                      },
+                      {
+                        id: 'golden_champion',
+                        label: '👑 Bota Oro del Campeón',
+                        desc: 'Caña extra-alta con laminado dorado. Para quien llega a defender el título.',
+                      },
+                      {
+                        id: 'pro_laced',
+                        label: '🏆 Pro Laceada Premium',
+                        desc: 'Corte medio con cordones prominentes y ribete de acento. Look profesional completo.',
+                      },
+                    ] as { id: BootsStyleId; label: string; desc: string }[]
+                  ).map((bs) => (
+                    <button
+                      key={bs.id}
+                      onClick={() => {
+                        soundEngine.playClick();
+                        updateField('bootsStyle', bs.id);
+                      }}
+                      className={`p-3.5 rounded-lg border text-left cursor-pointer transition-colors ${
+                        appearance.bootsStyle === bs.id
+                          ? 'bg-amber-500/15 border-amber-500'
+                          : 'bg-[#161B26] border-white/10 hover:border-white/25'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm text-white mb-0.5">{bs.label}</div>
+                      <div className="text-xs text-slate-400">{bs.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Boot Colors */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2">Color Principal</label>
+                    <div className="flex flex-wrap gap-2">
+                      {GEAR_PALETTES.map((gp) => (
+                        <button
+                          key={`boot_main_${gp.name}`}
+                          onClick={() => updateField('bootsColor', gp.main)}
+                          title={gp.name}
+                          className={`w-8 h-8 rounded-lg border-2 cursor-pointer ${
+                            appearance.bootsColor === gp.main ? 'border-amber-400 scale-110' : 'border-white/15'
+                          }`}
+                          style={{ backgroundColor: gp.main }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2">Acento / Cordones</label>
+                    <div className="flex flex-wrap gap-2">
+                      {GEAR_PALETTES.map((gp) => (
+                        <button
+                          key={`boot_acc_${gp.name}`}
+                          onClick={() => updateField('bootsAccentColor', gp.accent)}
+                          title={gp.name}
+                          className={`w-8 h-8 rounded-lg border-2 cursor-pointer ${
+                            appearance.bootsAccentColor === gp.accent ? 'border-amber-400 scale-110' : 'border-white/15'
+                          }`}
+                          style={{ backgroundColor: gp.accent }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2">Suela</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { name: 'Negro', hex: '#0F172A' },
+                        { name: 'Blanco', hex: '#F8FAFC' },
+                        { name: 'Rojo', hex: '#DC2626' },
+                        { name: 'Oro', hex: '#F59E0B' },
+                      ].map((sc) => (
+                        <button
+                          key={`sole_${sc.hex}`}
+                          onClick={() => updateField('bootsSoleColor', sc.hex)}
+                          title={sc.name}
+                          className={`w-8 h-8 rounded-lg border-2 cursor-pointer ${
+                            appearance.bootsSoleColor === sc.hex ? 'border-amber-400 scale-110' : 'border-white/15'
+                          }`}
+                          style={{ backgroundColor: sc.hex }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

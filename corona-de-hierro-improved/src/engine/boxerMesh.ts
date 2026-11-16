@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { BoxerAppearance, PunchType } from '../types/game';
+import { BoxerAppearance, PunchType, FightStyleTechnique } from '../types/game';
 import { WEIGHT_CLASSES } from '../data/careerData';
 import {
   createContactShadowTexture,
   createLeatherNormalRoughnessMap,
   createSkinBumpTexture,
+  createTattooTexture,
+  createTrunksPatternTexture,
 } from './textures';
 
 export type HitReactionDir = 'none' | 'straight' | 'left' | 'right' | 'up' | 'body';
@@ -77,6 +79,7 @@ export interface BoxerRig {
 export interface BoxerPoseParams {
   dt?: number;
   stance: 'orthodox' | 'southpaw';
+  fightTechnique?: FightStyleTechnique;
   elapsed: number;
   guardHigh: number;
   guardLow: number;
@@ -213,6 +216,14 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
 
   const leatherBump = trackTex(createLeatherNormalRoughnessMap());
   const skinBump = trackTex(createSkinBumpTexture());
+  const tattooTex = trackTex(createTattooTexture(appearance.tattooStyle || 'none'));
+  const trunksTex = trackTex(
+    createTrunksPatternTexture(
+      appearance.trunksPattern,
+      appearance.trunksColor,
+      appearance.trunksAccent
+    )
+  );
 
   const skinMat = trackMat(
     new THREE.MeshPhysicalMaterial({
@@ -229,6 +240,23 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     })
   );
 
+  // Inked skin material for chest and arms showing the tattoos
+  const tattooedSkinMat = trackMat(
+    new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(appearance.skinTone),
+      map: appearance.tattooStyle && appearance.tattooStyle !== 'none' ? tattooTex : null,
+      roughness: 0.54,
+      metalness: 0.02,
+      bumpMap: skinBump,
+      bumpScale: 0.0022,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.38,
+      sheen: 0.18,
+      sheenRoughness: 0.65,
+      sheenColor: new THREE.Color('#fca5a5'),
+    })
+  );
+
   const hairMat = trackMat(
     new THREE.MeshStandardMaterial({
       color: new THREE.Color(appearance.hairColor),
@@ -237,11 +265,13 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     })
   );
 
+  const isVintage = appearance.gloveFinish === 'vintage_leather';
   const trunksMat = trackMat(
     new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(appearance.trunksColor),
-      roughness: appearance.trunksPattern === 'metallic' ? 0.25 : 0.4,
-      metalness: appearance.trunksPattern === 'metallic' ? 0.72 : 0.15,
+      map: trunksTex,
+      roughness: appearance.trunksPattern === 'metallic' ? 0.25 : 0.42,
+      metalness: appearance.trunksPattern === 'metallic' ? 0.72 : 0.12,
       sheen: 0.7,
       sheenRoughness: 0.35,
       sheenColor: new THREE.Color(appearance.trunksAccent),
@@ -261,7 +291,9 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
       ? 0.62
       : appearance.gloveFinish === 'glossy'
         ? 0.22
-        : 0.2;
+        : isVintage
+          ? 0.75
+          : 0.2;
   const gloveMetalness = appearance.gloveFinish === 'metallic' ? 0.75 : 0.08;
 
   const gloveMat = trackMat(
@@ -270,7 +302,7 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
       roughness: gloveRoughness,
       metalness: gloveMetalness,
       bumpMap: leatherBump,
-      bumpScale: 0.005,
+      bumpScale: isVintage ? 0.008 : 0.005,
       clearcoat: appearance.gloveFinish === 'glossy' ? 0.8 : 0.22,
       clearcoatRoughness: 0.22,
     })
@@ -286,7 +318,7 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
 
   const tapeMat = trackMat(
     new THREE.MeshStandardMaterial({
-      color: 0xf1f5f9,
+      color: new THREE.Color(appearance.gloveTapeColor || '#f1f5f9'),
       roughness: 0.86,
       metalness: 0.0,
     })
@@ -296,9 +328,25 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     new THREE.MeshStandardMaterial({
       color: new THREE.Color(appearance.bootsColor),
       roughness: 0.52,
-      metalness: 0.14,
+      metalness: appearance.bootsStyle === 'golden_champion' ? 0.65 : 0.14,
       bumpMap: leatherBump,
       bumpScale: 0.0035,
+    })
+  );
+
+  const bootsAccentMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: new THREE.Color(appearance.bootsAccentColor || appearance.trunksAccent),
+      roughness: 0.38,
+      metalness: 0.5,
+    })
+  );
+
+  const bootsSoleMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: new THREE.Color(appearance.bootsSoleColor || '#0f172a'),
+      roughness: 0.8,
+      metalness: 0.05,
     })
   );
 
@@ -411,7 +459,7 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     new THREE.CylinderGeometry(0.248 * shoulderW * muscle, 0.186 * muscle, 0.285, 22)
   );
   chestGeo.scale(1.14, 1, 0.76);
-  const chestMesh = new THREE.Mesh(chestGeo, skinMat);
+  const chestMesh = new THREE.Mesh(chestGeo, tattooedSkinMat);
   chestMesh.position.y = 0.12;
   chestMesh.castShadow = true;
   chestMesh.receiveShadow = true;
@@ -419,9 +467,9 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
 
   const pecGeo = trackGeo(new THREE.SphereGeometry(0.108 * muscle, 16, 12));
   pecGeo.scale(1.12, 0.74, 0.66);
-  const pecL = new THREE.Mesh(pecGeo, skinMat);
+  const pecL = new THREE.Mesh(pecGeo, tattooedSkinMat);
   pecL.position.set(-0.084 * shoulderW, 0.16, 0.116 * muscle);
-  const pecR = new THREE.Mesh(pecGeo, skinMat);
+  const pecR = new THREE.Mesh(pecGeo, tattooedSkinMat);
   pecR.position.set(0.084 * shoulderW, 0.16, 0.116 * muscle);
   chest.add(pecL, pecR);
 
@@ -490,9 +538,12 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
   mouthguard.position.set(0, 0.122, 0.094);
   headGroup.add(mouthguard);
 
-  if (appearance.hairStyle === 'buzz' || appearance.hairStyle === 'fade') {
+  // --- PEINADOS Y CORTES DE PELO REALISTAS ---
+  if (appearance.hairStyle === 'bald') {
+    // Cabeza rapada al ras sin geometría adicional
+  } else if (appearance.hairStyle === 'buzz' || appearance.hairStyle === 'fade') {
     const capGeo = trackGeo(
-      new THREE.SphereGeometry(0.118, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.56)
+      new THREE.SphereGeometry(0.118, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.56)
     );
     capGeo.scale(0.89, 1.06, 0.97);
     const cap = new THREE.Mesh(capGeo, hairMat);
@@ -504,6 +555,80 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
       top.position.set(0, 0.285, 0.005);
       headGroup.add(top);
     }
+  } else if (appearance.hairStyle === 'textured_crop') {
+    // Corte moderno textured french crop con flequillo texturizado
+    const capGeo = trackGeo(
+      new THREE.SphereGeometry(0.119, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.54)
+    );
+    capGeo.scale(0.9, 1.05, 0.98);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.position.y = 0.178;
+    headGroup.add(cap);
+    const cropTop = trackGeo(new THREE.BoxGeometry(0.138, 0.045, 0.16));
+    const cropMesh = new THREE.Mesh(cropTop, hairMat);
+    cropMesh.position.set(0, 0.288, 0.02);
+    headGroup.add(cropMesh);
+    const fringeGeo = trackGeo(new THREE.BoxGeometry(0.115, 0.025, 0.045));
+    const fringeMesh = new THREE.Mesh(fringeGeo, hairMat);
+    fringeMesh.position.set(0, 0.272, 0.098);
+    headGroup.add(fringeMesh);
+  } else if (appearance.hairStyle === 'slick_back') {
+    // Clásico peinado hacia atrás fijado con pomada estilo campeón
+    const capGeo = trackGeo(
+      new THREE.SphereGeometry(0.122, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.6)
+    );
+    capGeo.scale(0.91, 1.08, 1.02);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.position.set(0, 0.18, -0.015);
+    headGroup.add(cap);
+    const pompadourGeo = trackGeo(new THREE.CapsuleGeometry(0.045, 0.14, 6, 12));
+    pompadourGeo.scale(1.2, 0.8, 1.4);
+    const pompadour = new THREE.Mesh(pompadourGeo, hairMat);
+    pompadour.rotation.x = Math.PI / 2;
+    pompadour.position.set(0, 0.292, -0.02);
+    headGroup.add(pompadour);
+  } else if (appearance.hairStyle === 'dreadlocks') {
+    // Rastas atadas de combate
+    const capGeo = trackGeo(new THREE.SphereGeometry(0.118, 16, 12, 0, Math.PI * 2, 0, 0.5 * Math.PI));
+    capGeo.scale(0.9, 1.06, 0.98);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.position.y = 0.18;
+    headGroup.add(cap);
+    for (let i = 0; i < 9; i++) {
+      const angle = (i / 9) * Math.PI - Math.PI / 2;
+      const dreadGeo = trackGeo(new THREE.CapsuleGeometry(0.016, 0.19, 4, 8));
+      const dread = new THREE.Mesh(dreadGeo, hairMat);
+      dread.position.set(Math.sin(angle) * 0.075, 0.24, -0.06 - Math.cos(angle) * 0.04);
+      dread.rotation.x = 0.75;
+      dread.rotation.z = -Math.sin(angle) * 0.45;
+      headGroup.add(dread);
+    }
+  } else if (appearance.hairStyle === 'cornrows') {
+    // Trenzas pegadas al cuero cabelludo muy limpias
+    for (let r = -3; r <= 3; r++) {
+      const rowGeo = trackGeo(new THREE.BoxGeometry(0.022, 0.032, 0.19));
+      const rowMesh = new THREE.Mesh(rowGeo, hairMat);
+      rowMesh.position.set(r * 0.028, 0.278 - Math.abs(r) * 0.012, -0.01);
+      headGroup.add(rowMesh);
+    }
+  } else if (appearance.hairStyle === 'curly_afro') {
+    // Afro redondeado denso
+    const afroGeo = trackGeo(new THREE.SphereGeometry(0.142, 22, 16));
+    afroGeo.scale(0.96, 1.02, 1.02);
+    const afro = new THREE.Mesh(afroGeo, hairMat);
+    afro.position.set(0, 0.225, -0.01);
+    headGroup.add(afro);
+  } else if (appearance.hairStyle === 'topknot') {
+    // Moño samurái / guerrero moderno con laterales degradados
+    const capGeo = trackGeo(new THREE.SphereGeometry(0.118, 18, 12, 0, Math.PI * 2, 0, 0.52 * Math.PI));
+    capGeo.scale(0.89, 1.06, 0.97);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.position.y = 0.178;
+    headGroup.add(cap);
+    const knotGeo = trackGeo(new THREE.SphereGeometry(0.042, 12, 10));
+    const knot = new THREE.Mesh(knotGeo, hairMat);
+    knot.position.set(0, 0.315, -0.045);
+    headGroup.add(knot);
   } else if (appearance.hairStyle === 'mohawk') {
     const crestGeo = trackGeo(new THREE.BoxGeometry(0.042, 0.068, 0.18));
     const crest = new THREE.Mesh(crestGeo, hairMat);
@@ -530,6 +655,7 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     headGroup.add(cap, back);
   }
 
+  // --- BARBAS Y VELLO FACIAL DETALLADOS ---
   if (appearance.facialHair === 'stubble') {
     const stubMat = trackMat(
       new THREE.MeshStandardMaterial({
@@ -543,6 +669,26 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     const stub = new THREE.Mesh(stubGeo, stubMat);
     stub.position.set(0, 0.105, 0.028);
     headGroup.add(stub);
+  } else if (appearance.facialHair === 'heavy_stubble') {
+    const heavyStubMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(appearance.hairColor),
+        roughness: 0.92,
+        transparent: true,
+        opacity: 0.72,
+      })
+    );
+    const stubGeo = trackGeo(new THREE.BoxGeometry(0.132, 0.078, 0.142));
+    const stub = new THREE.Mesh(stubGeo, heavyStubMat);
+    stub.position.set(0, 0.102, 0.03);
+    headGroup.add(stub);
+  } else if (appearance.facialHair === 'mustache_vintage') {
+    // Bigote clásico de boxeador de la vieja guardia
+    const mustMat = trackMat(new THREE.MeshStandardMaterial({ color: new THREE.Color(appearance.hairColor), roughness: 0.8 }));
+    const mustacheGeo = trackGeo(new THREE.BoxGeometry(0.075, 0.024, 0.032));
+    const mustache = new THREE.Mesh(mustacheGeo, mustMat);
+    mustache.position.set(0, 0.138, 0.108);
+    headGroup.add(mustache);
   } else if (appearance.facialHair === 'goatee') {
     const goatGeo = trackGeo(new THREE.BoxGeometry(0.068, 0.065, 0.048));
     const goat = new THREE.Mesh(goatGeo, hairMat);
@@ -552,6 +698,12 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     const beardGeo = trackGeo(new THREE.BoxGeometry(0.135, 0.095, 0.145));
     const beard = new THREE.Mesh(beardGeo, hairMat);
     beard.position.set(0, 0.098, 0.032);
+    headGroup.add(beard);
+  } else if (appearance.facialHair === 'viking_beard') {
+    // Barba espesa y contundente de guerrero
+    const beardGeo = trackGeo(new THREE.BoxGeometry(0.142, 0.135, 0.155));
+    const beard = new THREE.Mesh(beardGeo, hairMat);
+    beard.position.set(0, 0.075, 0.038);
     headGroup.add(beard);
   }
 
@@ -612,15 +764,23 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     shoulder.position.set(sign * 0.278 * shoulderW * muscle, 0.22, 0);
     chest.add(shoulder);
 
+    // Apply tattoo to arms depending on style
+    const armSkinMat =
+      (appearance.tattooStyle === 'full_inked') ||
+      (isLeft && appearance.tattooStyle === 'sleeve_tribal_left') ||
+      (!isLeft && appearance.tattooStyle === 'sleeve_dragon_right')
+        ? tattooedSkinMat
+        : skinMat;
+
     const deltGeo = trackGeo(new THREE.SphereGeometry(0.074 * muscle, 14, 12));
-    const delt = new THREE.Mesh(deltGeo, skinMat);
+    const delt = new THREE.Mesh(deltGeo, armSkinMat);
     delt.castShadow = true;
     shoulder.add(delt);
 
     const upperArmGeo = trackGeo(
       new THREE.CapsuleGeometry(0.055 * muscle, armLen - 0.06, 6, 12)
     );
-    const upperArm = new THREE.Mesh(upperArmGeo, skinMat);
+    const upperArm = new THREE.Mesh(upperArmGeo, armSkinMat);
     upperArm.position.y = -armLen * 0.5;
     upperArm.castShadow = true;
     shoulder.add(upperArm);
@@ -632,7 +792,7 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     const forearmGeo = trackGeo(
       new THREE.CapsuleGeometry(0.046 * muscle, forearmLen - 0.06, 6, 12)
     );
-    const forearm = new THREE.Mesh(forearmGeo, skinMat);
+    const forearm = new THREE.Mesh(forearmGeo, armSkinMat);
     forearm.position.y = -forearmLen * 0.5;
     forearm.castShadow = true;
     elbow.add(forearm);
@@ -688,20 +848,36 @@ export function buildBoxerRig(appearance: BoxerAppearance): BoxerRig {
     calf.castShadow = true;
     knee.add(calf);
 
-    const bootShaftGeo = trackGeo(new THREE.CylinderGeometry(0.057, 0.052, 0.175, 14));
+    const bootHeight =
+      appearance.bootsStyle === 'speed_low'
+        ? 0.115
+        : appearance.bootsStyle === 'golden_champion' || appearance.bootsStyle === 'pro_laced'
+          ? 0.21
+          : 0.175;
+
+    const bootShaftGeo = trackGeo(new THREE.CylinderGeometry(0.058, 0.052, bootHeight, 16));
     const bootShaft = new THREE.Mesh(bootShaftGeo, bootsMat);
-    bootShaft.position.y = -0.34;
+    bootShaft.position.y = -0.43 + bootHeight * 0.5 + 0.015;
     bootShaft.castShadow = true;
     knee.add(bootShaft);
 
-    const collarGeo = trackGeo(new THREE.TorusGeometry(0.056, 0.01, 6, 14));
-    const collar = new THREE.Mesh(collarGeo, trunksAccentMat);
+    // Boot top collar / laces
+    const collarGeo = trackGeo(new THREE.TorusGeometry(0.057, 0.012, 6, 16));
+    const collar = new THREE.Mesh(collarGeo, bootsAccentMat);
     collar.rotation.x = Math.PI / 2;
-    collar.position.y = -0.255;
+    collar.position.y = bootShaft.position.y + bootHeight * 0.5;
     knee.add(collar);
 
-    const soleGeo = trackGeo(new THREE.BoxGeometry(0.102, 0.055, 0.225));
-    const sole = new THREE.Mesh(soleGeo, bootsMat);
+    // Front lace strip for pro boots
+    if (appearance.bootsStyle === 'pro_laced' || appearance.bootsStyle === 'golden_champion') {
+      const lacesGeo = trackGeo(new THREE.BoxGeometry(0.024, bootHeight * 0.85, 0.012));
+      const laces = new THREE.Mesh(lacesGeo, bootsAccentMat);
+      laces.position.set(0, bootShaft.position.y, 0.054);
+      knee.add(laces);
+    }
+
+    const soleGeo = trackGeo(new THREE.BoxGeometry(0.104, 0.055, 0.228));
+    const sole = new THREE.Mesh(soleGeo, bootsSoleMat);
     sole.position.set(0, -0.43, 0.045);
     sole.castShadow = true;
     knee.add(sole);
@@ -871,22 +1047,45 @@ export function poseBoxer(rig: BoxerRig, p: BoxerPoseParams): void {
     }
   }
 
+  // Stance Guard Techniques & Movement Styles (Philly Shell, Peek-a-boo, Slugger)
+  const technique = p.fightTechnique || 'orthodox_classic';
+  let techTorsoRotY = 0;
+  let techTorsoRotX = 0;
+  let techHeadRotY = 0;
+
+  if (technique === 'philly_shell') {
+    // Shoulder roll style: torso turned deep sideways, lead arm resting low across midsection, rear hand guarding chin
+    techTorsoRotY = 0.35 * mirror;
+    techTorsoRotX = 0.05;
+    techHeadRotY = -0.22 * mirror; // looking over lead shoulder
+  } else if (technique === 'peek_a_boo') {
+    // Mike Tyson Peek-a-boo: deep bobbing crouch, gloves glued to cheekbones, square stance
+    techTorsoRotX = 0.16;
+    techTorsoRotY = -0.12 * mirror; // squared up shoulders
+    tHipsY -= 0.045; // lower center of gravity
+  } else if (technique === 'slugger_heavy') {
+    // George Foreman heavy wide guard loaded for power
+    techTorsoRotX = 0.08;
+    techTorsoRotY = 0.06 * mirror;
+  }
+
   const slipAngleZ = -p.slipX * 0.46;
   let tTorsoRotX =
     0.15 +
+    techTorsoRotX +
     Math.abs(p.slipX) * 0.2 +
     p.guardLow * 0.24 +
     p.leanZ * 0.16 +
     bodyCrunchTarget -
     p.hitRecoilY * 0.2;
-  let tTorsoRotY = 0.18 * mirror + p.slipX * 0.24;
+  let tTorsoRotY = 0.18 * mirror + techTorsoRotY + p.slipX * 0.24;
   let tTorsoRotZ = slipAngleZ + p.hitRecoilX * 0.22;
 
   let tChestRotX = breathe;
   let tChestRotY = 0.08 * mirror;
 
   let tHeadRotX = 0.18 + headSnapX;
-  let tHeadRotY = -0.1 * mirror + headSnapY;
+  let tHeadRotY = -0.1 * mirror + techHeadRotY + headSnapY;
   let tHeadRotZ = -slipAngleZ * 0.48 + headSnapZ;
 
   // Default tight cheek-level guard + fatigue droop
@@ -906,6 +1105,36 @@ export function poseBoxer(rig: BoxerRig, p: BoxerPoseParams): void {
   ];
   let tElR = -1.92 - p.guardHigh * 0.3 + droop * 1.3;
   let tWristR = 0;
+
+  // Adapt guard position based on technique
+  if (technique === 'philly_shell') {
+    if (p.stance === 'orthodox') {
+      // Left arm resting low across belly/liver, left shoulder raised high to deflect punches
+      tShL = [-0.35 - p.guardHigh * 0.3, 0.45, -0.65 + p.guardHigh * 0.2];
+      tElL = -0.85 - p.guardHigh * 0.3;
+      // Right hand glued directly to right jawline
+      tShR = [-1.15 - p.guardHigh * 0.35, -0.18, 0.12];
+      tElR = -2.35;
+    } else {
+      // Southpaw shell
+      tShR = [-0.35 - p.guardHigh * 0.3, -0.45, 0.65 - p.guardHigh * 0.2];
+      tElR = -0.85 - p.guardHigh * 0.3;
+      tShL = [-1.15 - p.guardHigh * 0.35, 0.18, -0.12];
+      tElL = -2.35;
+    }
+  } else if (technique === 'peek_a_boo') {
+    // High earmuff peek-a-boo guard both fists right in front of nose/eyes
+    tShL = [-1.35 - p.guardHigh * 0.3, 0.14, 0.28];
+    tElL = -2.38;
+    tShR = [-1.35 - p.guardHigh * 0.3, -0.14, -0.28];
+    tElR = -2.38;
+  } else if (technique === 'slugger_heavy') {
+    // Cross-arm / long heavy guard
+    tShL = [-0.98, 0.35, -0.1];
+    tElL = -1.65;
+    tShR = [-1.05, -0.35, 0.1];
+    tElR = -1.72;
+  }
 
   // Guard Broken Stagger
   if (p.guardBroken) {

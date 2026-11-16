@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   CAREER_OPPONENTS,
   STORY_BEATS,
+  WEIGHT_CLASSES,
   createInitialCareerState,
 } from './data/careerData';
 import {
@@ -15,6 +16,7 @@ import {
   StoryBeat,
   TraitId,
   TrainingDrillType,
+  WeightClassId,
 } from './types/game';
 import { TitleScreen } from './components/TitleScreen';
 import { CharacterEditor } from './components/CharacterEditor';
@@ -174,9 +176,24 @@ export default function App() {
       const healed = prev.injuries
         .map((inj) => ({ ...inj, weeksRemaining: inj.weeksRemaining - healStep }))
         .filter((inj) => inj.weeksRemaining > 0);
+      const newWeek = prev.week + 1;
+      // Age increments every 52 weeks (1 boxing year)
+      const currentAge = prev.age ?? 22;
+      const newAge = newWeek % 52 === 0 ? currentAge + 1 : currentAge;
+      // Age-based stat decay: once boxer is 36+ each year subtract 1 speed & footwork
+      let agedStats = prev.stats;
+      if (newAge > currentAge && newAge >= 36) {
+        agedStats = {
+          ...prev.stats,
+          speed: Math.max(50, prev.stats.speed - 1),
+          footwork: Math.max(50, prev.stats.footwork - 1),
+        };
+      }
       return {
         ...prev,
-        week: prev.week + 1,
+        week: newWeek,
+        age: newAge,
+        stats: agedStats,
         morale: Math.min(100, prev.morale + 10),
         injuries: healed,
       };
@@ -200,6 +217,25 @@ export default function App() {
     setScreen('fight');
   };
 
+  // Change weight class — costs morale and resets rank if moving up
+  const handleChangeWeightClass = (newClass: WeightClassId) => {
+    setCareer((prev) => {
+      if (prev.appearance.weightClass === newClass) return prev;
+      const isMovingUp =
+        WEIGHT_CLASSES.findIndex((w) => w.id === newClass) >
+        WEIGHT_CLASSES.findIndex((w) => w.id === prev.appearance.weightClass);
+      return {
+        ...prev,
+        appearance: { ...prev.appearance, weightClass: newClass },
+        // Moving up: harder, loses ranking. Moving down: easier, minor morale drop
+        rank: isMovingUp ? Math.min(16, prev.rank + 4) : Math.max(prev.rank - 2, prev.rank),
+        belt: isMovingUp ? 'none' : prev.belt,
+        morale: Math.max(15, prev.morale - (isMovingUp ? 20 : 10)),
+        week: prev.week + 4, // Training camp takes 4 weeks
+      };
+    });
+  };
+
   const handleFinishFight = (res: FightResult) => {
     if (isExhibitionFight) {
       setActiveOpponent(null);
@@ -221,6 +257,20 @@ export default function App() {
         else if (opp.rank <= 11 && nextBelt === 'none') nextBelt = 'local';
       }
 
+      // Track multi-division championship belts
+      let nextChampionshipBeltsWon = prev.championshipBeltsWon ?? [];
+      if (res.won && opp && opp.rank === 0) {
+        const currentClass = prev.appearance.weightClass as WeightClassId;
+        if (!nextChampionshipBeltsWon.includes(currentClass)) {
+          nextChampionshipBeltsWon = [...nextChampionshipBeltsWon, currentClass];
+        }
+      }
+
+      // Age progression: 1 fight = 2 weeks (travel + camp)
+      const newWeek = prev.week + 2;
+      const currentAge = prev.age ?? 22;
+      const newAge = Math.floor(newWeek / 52) + 22;
+
       // Merge new injuries (replace/worsen same zone or add new)
       const updatedInjuries = [...prev.injuries]
         .map((inj) => ({ ...inj, weeksRemaining: Math.max(1, inj.weeksRemaining - 1) }));
@@ -238,9 +288,11 @@ export default function App() {
 
       return {
         ...prev,
-        week: prev.week + 1,
+        week: newWeek,
+        age: newAge > currentAge ? newAge : currentAge,
         rank: nextRank,
         belt: nextBelt,
+        championshipBeltsWon: nextChampionshipBeltsWon,
         money: prev.money + res.purseEarned,
         gymPoints: prev.gymPoints + res.gymPointsEarned,
         morale: Math.min(100, Math.max(15, prev.morale + (res.won ? 12 : -10))),

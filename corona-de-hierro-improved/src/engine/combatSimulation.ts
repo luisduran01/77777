@@ -1406,6 +1406,7 @@ export class CombatSimulation {
       poseBoxer(rig, {
         dt: this.lastDt,
         stance: f.appearance.stance,
+        fightTechnique: f.appearance.fightTechnique,
         elapsed: this.elapsed + (f.isPlayer ? 0 : 1.7),
         guardHigh: f.guardHigh,
         guardLow: f.guardLow,

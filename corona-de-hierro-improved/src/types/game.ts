@@ -2,10 +2,60 @@ export type WeightClassId = 'lightweight' | 'welterweight' | 'middleweight' | 'h
 
 export type StanceType = 'orthodox' | 'southpaw';
 
-export type HairStyleId = 'buzz' | 'fade' | 'mohawk' | 'braids' | 'long';
-export type FacialHairId = 'clean' | 'stubble' | 'goatee' | 'full_beard';
-export type TrunksPatternId = 'classic' | 'stripe' | 'championship' | 'metallic';
-export type GloveFinishId = 'matte' | 'glossy' | 'metallic';
+export type HairStyleId =
+  | 'bald'
+  | 'buzz'
+  | 'fade'
+  | 'textured_crop'
+  | 'slick_back'
+  | 'dreadlocks'
+  | 'cornrows'
+  | 'curly_afro'
+  | 'topknot'
+  | 'mohawk'
+  | 'braids'
+  | 'long';
+
+export type FacialHairId =
+  | 'clean'
+  | 'stubble'
+  | 'heavy_stubble'
+  | 'goatee'
+  | 'mustache_vintage'
+  | 'full_beard'
+  | 'viking_beard';
+
+export type TrunksPatternId =
+  | 'classic'
+  | 'stripe'
+  | 'championship'
+  | 'metallic'
+  | 'camo'
+  | 'gladiator'
+  | 'flames';
+
+export type GloveFinishId = 'matte' | 'glossy' | 'metallic' | 'vintage_leather';
+
+export type BootsStyleId =
+  | 'classic_high'
+  | 'speed_low'
+  | 'golden_champion'
+  | 'pro_laced';
+
+export type TattooStyleId =
+  | 'none'
+  | 'chest_eagle'
+  | 'sleeve_tribal_left'
+  | 'sleeve_dragon_right'
+  | 'back_wings'
+  | 'full_inked'
+  | 'neck_crown';
+
+export type FightStyleTechnique =
+  | 'orthodox_classic'
+  | 'philly_shell'
+  | 'peek_a_boo'
+  | 'slugger_heavy';
 
 export type TraitId =
   | 'iron_chin'
@@ -33,13 +83,24 @@ export interface BoxerAppearance {
   hairColor: string;
   facialHair: FacialHairId;
   hasScar: boolean;
+  tattooStyle: TattooStyleId;
+  tattooArmL?: boolean;
+  tattooArmR?: boolean;
+  tattooChest?: boolean;
+  tattooBack?: boolean;
+  fightTechnique?: FightStyleTechnique;
+  // Indumentaria personalizable completa
   trunksColor: string;
   trunksAccent: string;
   trunksPattern: TrunksPatternId;
   gloveColor: string;
   gloveAccent: string;
   gloveFinish: GloveFinishId;
+  gloveTapeColor?: string;
+  bootsStyle?: BootsStyleId;
   bootsColor: string;
+  bootsAccentColor?: string;
+  bootsSoleColor?: string;
 }
 
 export interface BoxerStats {
@@ -140,8 +201,10 @@ export type TrainingDrillType = 'heavy_bag' | 'speed_reflex' | 'defense_sparring
 export interface CareerState {
   initialized: boolean;
   week: number;
+  age?: number; // edad del boxeador (ej. 22 años al debutar)
   rank: number; // starts at 16 (unranked contender), 0 = Undisputed World Champion
   belt: 'none' | 'local' | 'national' | 'world';
+  championshipBeltsWon?: WeightClassId[]; // registro de títulos en distintas divisiones para doble / triple campeón
   money: number;
   gymPoints: number;
   morale: number; // 0 - 100
