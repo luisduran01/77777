@@ -1,0 +1,6 @@
+{
+  "name": "Corona de Hierro",
+  "description": "Juego de boxeo 3D de nueva generación con modo carrera cinematográfico, editor profundo de personajes, entrenamientos jugables, física de impacto realista, IA avanzada y sistema dinámico de lesiones.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
